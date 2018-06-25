@@ -1,0 +1,15 @@
+jodconverter:
+  local:
+    enabled: true
+    port-numbers: 8100
+    office-home: /opt/libreoffice6.0
+server:
+  port: 8080
+
+spring:
+  http:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+  application:
+    name: JODConverter Sample Spring Boot
