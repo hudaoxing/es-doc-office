@@ -1,92 +1,74 @@
 package cn.joylau.code.controller;
 
 
+import lombok.Data;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.jodconverter.DocumentConverter;
 import org.jodconverter.document.DefaultDocumentFormatRegistry;
 import org.jodconverter.document.DocumentFormat;
 import org.jodconverter.office.OfficeException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-@Controller
+@RequestMapping("office")
+@RestController
+@Data
 public class OfficeController {
-    private static final String ATTRNAME_ERROR_MESSAGE = "errorMessage";
-    private static final String ON_ERROR_REDIRECT = "redirect:/";
+
+    @Value("${file.remote-addr}")
+    private String remoteAddr;
+
+    private final DocumentConverter converter;
 
     @Autowired
-    private DocumentConverter converter;
-
-    @GetMapping("/")
-    public String index() {
-        return "converter";
+    public OfficeController(DocumentConverter converter) {
+        this.converter = converter;
     }
 
-    @PostMapping("/converter")
-    public Object convert(
-            @RequestParam("inputFile") final MultipartFile inputFile,
-            @RequestParam(name = "outputFormat", required = false) final String outputFormat,
-            final RedirectAttributes redirectAttributes) {
+    @GetMapping("/preview/{fileName}")
+    public Object preview(@PathVariable String fileName){
+        try {
+            Resource resource = new UrlResource(remoteAddr + fileName);
+            if (FilenameUtils.getExtension(resource.getFilename()).equalsIgnoreCase("pdf")) {
+                return "Is the PDF file";
+            }
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-        if (inputFile.isEmpty()) {
-            redirectAttributes.addFlashAttribute(
-                    ATTRNAME_ERROR_MESSAGE, "Please select a file to upload.");
-            return ON_ERROR_REDIRECT;
-        }
+                final DocumentFormat targetFormat =
+                        DefaultDocumentFormatRegistry.getFormatByExtension("pdf");
+                converter
+                        .convert(resource.getInputStream())
+                        .as(
+                                DefaultDocumentFormatRegistry.getFormatByExtension(
+                                        FilenameUtils.getExtension(resource.getFilename())))
+                        .to(baos)
+                        .as(targetFormat)
+                        .execute();
 
-        if (StringUtils.isBlank(outputFormat)) {
-            redirectAttributes.addFlashAttribute(
-                    ATTRNAME_ERROR_MESSAGE, "Please select an output format.");
-            return ON_ERROR_REDIRECT;
-        }
+                final HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.parseMediaType(targetFormat.getMediaType()));
+                return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
 
-        // Here, we could have a dedicated service that would convert document
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-
-            final DocumentFormat targetFormat =
-                    DefaultDocumentFormatRegistry.getFormatByExtension(outputFormat);
-            converter
-                    .convert(inputFile.getInputStream())
-                    .as(
-                            DefaultDocumentFormatRegistry.getFormatByExtension(
-                                    FilenameUtils.getExtension(inputFile.getOriginalFilename())))
-                    .to(baos)
-                    .as(targetFormat)
-                    .execute();
-
-            final HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType(targetFormat.getMediaType()));
-            headers.add(
-                    "Content-Disposition",
-                    "attachment; filename="
-                            + FilenameUtils.getBaseName(inputFile.getOriginalFilename())
-                            + "."
-                            + targetFormat.getExtension());
-            return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
-
-        } catch (OfficeException | IOException e) {
+            } catch (OfficeException | IOException e) {
+                e.printStackTrace();
+                return "convert error: " + e.getMessage();
+            }
+        } catch (IOException e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute(
-                    ATTRNAME_ERROR_MESSAGE,
-                    "Unable to convert the file "
-                            + inputFile.getOriginalFilename()
-                            + ". Cause: "
-                            + e.getMessage());
+            return "File does not exist;";
         }
-
-        return ON_ERROR_REDIRECT;
     }
 }

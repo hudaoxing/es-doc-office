@@ -3,13 +3,18 @@ jodconverter:
     enabled: true
     port-numbers: 8100
     office-home: /opt/libreoffice6.0
+    task-queue-timeout: 60000
 server:
   port: 8080
 
 spring:
-  http:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 10MB
   application:
     name: JODConverter Sample Spring Boot
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# config nginx static file directory
+file:
+  remote-addr: http://192.168.10.74/
