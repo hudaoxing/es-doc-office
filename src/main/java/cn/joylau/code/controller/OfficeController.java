@@ -56,8 +56,8 @@ public class OfficeController {
     }
 
 
-    @GetMapping("/preview/{remoteRelativePath}")
-    public Object previewFTPFile(@PathVariable String remoteRelativePath){
+    @GetMapping("/previewFTPFile")
+    public Object previewFTPFile(String remoteRelativePath){
         try {
             InputStream inputStream = ftpService.downStreamFile(remoteRelativePath);
             if (inputStream == null) {
@@ -96,6 +96,7 @@ public class OfficeController {
                     .as(targetFormat)
                     .execute();
 
+            inputStream.close();
             final HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(targetFormat.getMediaType()));
             return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);

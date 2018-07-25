@@ -5,7 +5,7 @@
 
     <groupId>cn.joylau.code</groupId>
     <artifactId>es-doc-office</artifactId>
-    <version>v1.0-SNAPSHOT</version>
+    <version>v1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>es-doc-office</name>

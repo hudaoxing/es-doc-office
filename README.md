@@ -38,3 +38,7 @@
     $ sudo apt-get remove --purge libreoffice6.x-*  /* 移除所有类似libreoffice6.x-*的包。--purge表示卸载的同时移除所有相关的配置文件 */
     
 LibreOffice 的安装表示没有像 OpenOffice 那样遇到很多问题。
+
+
+## 2018-07-25 16:16:53 更新
+1. 支持 FTP 服务器文件的转化

@@ -2,7 +2,6 @@ package cn.joylau.code.service;
 
 import lombok.Data;
 import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +64,6 @@ public class FTPService {
     @PreDestroy
     public void destroyService() {
         try {
-            FTPClient ftpClient = this.ftpClient;
             if (ftpClient != null) {
                 ftpClient.logout();
                 ftpClient.disconnect();
@@ -83,22 +81,27 @@ public class FTPService {
      * @return InputStream
      */
     public InputStream downStreamFile(String path, String fileName) {
-        FTPClient ftpClient = this.ftpClient;
-        FTPFile[] fs;
+        //每次都设置被动模式
+        ftpClient.enterLocalPassiveMode();
+        String[] names;
         try {
             String remotePath = new String(path.getBytes(serverCharset.toString()), "ISO-8859-1");
-            if (!ftpClient.changeWorkingDirectory(remotePath)) {                //转移到FTP服务器目录
+            //转移到FTP服务器目录
+            if (!ftpClient.changeWorkingDirectory(remotePath)) {
                 logger.error(path + "目录不存在");
                 return null;
             }
-            fs = ftpClient.listFiles();
-            for (FTPFile ff : fs) {
-                if (ff.getName().equals(fileName)) {
-                    return ftpClient.retrieveFileStream(ff.getName());
+            names = ftpClient.listNames();
+            for (String name : names) {
+                if (name.equals(fileName)) {
+                    InputStream inputStream = ftpClient.retrieveFileStream(name);
+                    ftpClient.getReply();
+                    return inputStream;
                 }
             }
             return null;
         } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
