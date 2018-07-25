@@ -1,6 +1,7 @@
 package cn.joylau.code.controller;
 
 
+import cn.joylau.code.service.FTPService;
 import lombok.Data;
 import org.apache.commons.io.FilenameUtils;
 import org.jodconverter.DocumentConverter;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 @RequestMapping("office")
 @RestController
@@ -32,10 +34,11 @@ public class OfficeController {
     private String remoteAddr;
 
     private final DocumentConverter converter;
-
+    private final FTPService ftpService;
     @Autowired
-    public OfficeController(DocumentConverter converter) {
+    public OfficeController(DocumentConverter converter, FTPService ftpService) {
         this.converter = converter;
+        this.ftpService = ftpService;
     }
 
     @GetMapping("/preview/{fileName}")
@@ -45,30 +48,60 @@ public class OfficeController {
             if (FilenameUtils.getExtension(resource.getFilename()).equalsIgnoreCase("pdf")) {
                 return "Is the PDF file";
             }
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-
-                final DocumentFormat targetFormat =
-                        DefaultDocumentFormatRegistry.getFormatByExtension("pdf");
-                converter
-                        .convert(resource.getInputStream())
-                        .as(
-                                DefaultDocumentFormatRegistry.getFormatByExtension(
-                                        FilenameUtils.getExtension(resource.getFilename())))
-                        .to(baos)
-                        .as(targetFormat)
-                        .execute();
-
-                final HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.parseMediaType(targetFormat.getMediaType()));
-                return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
-
-            } catch (OfficeException | IOException e) {
-                e.printStackTrace();
-                return "convert error: " + e.getMessage();
-            }
+            return convert(resource.getInputStream(),FilenameUtils.getExtension(resource.getFilename()));
         } catch (IOException e) {
             e.printStackTrace();
             return "File does not exist;";
+        }
+    }
+
+
+    @GetMapping("/preview/{remoteRelativePath}")
+    public Object previewFTPFile(@PathVariable String remoteRelativePath){
+        try {
+            InputStream inputStream = ftpService.downStreamFile(remoteRelativePath);
+            if (inputStream == null) {
+                return "The file cannot be read;";
+            }
+            String remoteFileName;
+            if (remoteRelativePath.contains("/")) {
+                int index = remoteRelativePath.lastIndexOf("/");
+                remoteFileName = remoteRelativePath.substring(index + 1);
+            } else {
+                remoteFileName = remoteRelativePath;
+            }
+            if (FilenameUtils.getExtension(remoteFileName).equalsIgnoreCase("pdf")) {
+                return "Is the PDF file";
+            }
+            return convert(inputStream,FilenameUtils.getExtension(remoteFileName));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "The file cannot be read;";
+        }
+    }
+
+    /**
+     * 转化方法
+     * @param inputStream 输入文件流
+     * @param inputFileExtension 输入文件扩展名
+     * @return object
+     */
+    private Object convert(InputStream inputStream, String inputFileExtension) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            final DocumentFormat targetFormat = DefaultDocumentFormatRegistry.getFormatByExtension("pdf");
+            converter
+                    .convert(inputStream)
+                    .as(DefaultDocumentFormatRegistry.getFormatByExtension(inputFileExtension))
+                    .to(baos)
+                    .as(targetFormat)
+                    .execute();
+
+            final HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(targetFormat.getMediaType()));
+            return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
+        } catch (OfficeException | IOException e) {
+            e.printStackTrace();
+            return "convert error: " + e.getMessage();
         }
     }
 }

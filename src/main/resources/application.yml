@@ -18,3 +18,8 @@ spring:
 # config nginx static file directory
 file:
   remote-addr: http://192.168.10.74/
+ftp:
+  username: ftp
+  password: ftp
+  ip: 192.168.10.240
+  port: 21
