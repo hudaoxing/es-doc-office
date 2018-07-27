@@ -94,7 +94,7 @@ public class FTPService {
             names = ftpClient.listNames();
             for (String name : names) {
                 if (name.equals(fileName)) {
-                    InputStream inputStream = ftpClient.retrieveFileStream(name);
+                    InputStream inputStream = ftpClient.retrieveFileStream(new String(name.getBytes(serverCharset.toString()), "ISO-8859-1"));
                     ftpClient.getReply();
                     return inputStream;
                 }
