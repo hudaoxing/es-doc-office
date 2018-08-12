@@ -4,6 +4,7 @@ package cn.joylau.code.controller;
 import cn.joylau.code.service.FTPService;
 import lombok.Data;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.jodconverter.DocumentConverter;
 import org.jodconverter.document.DefaultDocumentFormatRegistry;
 import org.jodconverter.document.DocumentFormat;
@@ -70,8 +71,11 @@ public class OfficeController {
             } else {
                 remoteFileName = remoteRelativePath;
             }
+            /*如果该文件是PDF文件,则不必转换,直接显示*/
             if (FilenameUtils.getExtension(remoteFileName).equalsIgnoreCase("pdf")) {
-                return "Is the PDF file";
+                final HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_PDF);
+                return new ResponseEntity<>(IOUtils.toByteArray(inputStream), headers, HttpStatus.OK);
             }
             return convert(inputStream,FilenameUtils.getExtension(remoteFileName));
         } catch (Exception e) {
