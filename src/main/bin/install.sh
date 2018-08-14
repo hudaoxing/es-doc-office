@@ -42,4 +42,5 @@ cat>/usr/lib/systemd/system/${SERVICE_NAME}.service<<EOF
 EOF
 
 systemctl daemon-reload
+systemctl enable es-doc-office.service
 echo "install success!"
